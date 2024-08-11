@@ -1,0 +1,26 @@
+<mat-toolbar>
+  <mat-toolbar-row>
+    <app-button name="{{ title() }}" [selected]="''" (click)="onSelect('')" />
+    <span class="spacer"></span>
+    <app-button
+      name="Create Quiz"
+      [selected]="btnName()"
+      (click)="onSelect('Create Quiz')"
+    />
+    <app-button
+      name="My Quizzes"
+      [selected]="btnName()"
+      (click)="onSelect('My Quizzes')"
+    />
+    <app-button
+      name="API Keys"
+      [selected]="btnName()"
+      (click)="onSelect('API Keys')"
+    />
+    <app-button
+      name="Login"
+      [selected]="btnName()"
+      (click)="onSelect('Login')"
+    />
+  </mat-toolbar-row>
+</mat-toolbar>

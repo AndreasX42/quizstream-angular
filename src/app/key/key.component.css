@@ -1,0 +1,19 @@
+.table-container {
+  margin: 2rem auto;
+  max-width: 50rem;
+  padding: 1rem;
+}
+
+table {
+  width: 100%;
+}
+
+th.mat-header-cell,
+td.mat-cell {
+  text-align: left;
+  padding: 8px;
+}
+
+.mat-icon-button {
+  margin-left: 16px;
+}

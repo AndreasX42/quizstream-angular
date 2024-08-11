@@ -1,0 +1,5 @@
+<div class="quiz-list">
+  @for(quiz of quizzes(); track quiz.id) {
+  <app-quiz [quiz]="quiz" />
+  }
+</div>
