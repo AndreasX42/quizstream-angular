@@ -1,0 +1,17 @@
+version: "3"
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: app
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/app
+      - /app/src/app/shared/environment
+      - /app/node_modules
+    environment:
+      - API_URL=http://localhost:9090
+      - API_KEY=xyz
+      - CHOKIDAR_USEPOLLING=true
