@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ErrorModalComponent } from '../modal/error-modal/error-modal.component';
 import { SuccessModalComponent } from '../modal/success-modal/success-modal.component';

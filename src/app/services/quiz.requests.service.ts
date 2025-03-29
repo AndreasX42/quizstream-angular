@@ -10,11 +10,7 @@ import {
   timeout,
 } from 'rxjs';
 import { Configs } from '../shared/api.configs';
-import {
-  getEnumDisplayName,
-  QuizRequest,
-  RequestStatus,
-} from '../models/quiz.model';
+import { QuizRequest, RequestStatus } from '../models/quiz.model';
 import { Page } from '../models/page.model';
 import { AuthService } from './auth.service';
 import { MessageService } from './message.service';

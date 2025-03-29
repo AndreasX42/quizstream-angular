@@ -18,7 +18,7 @@ import {
 } from '../../models/quiz.model';
 import { QuizService } from '../../services/quiz.service';
 import { CommonModule } from '@angular/common';
-import { CanDeactivateFn, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { ErrorManagerFactory } from '../../shared/error.manager.factory';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';

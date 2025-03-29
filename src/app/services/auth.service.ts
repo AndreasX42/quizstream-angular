@@ -31,9 +31,12 @@ export class AuthService {
     return localStorage.getItem(this.localStorageTokenKey);
   }
 
-  login(username: string, password: string): Observable<any> {
+  login(
+    username: string,
+    password: string
+  ): Observable<HttpResponse<LoginResponse>> {
     return this.httpClient
-      .post<any>(
+      .post<LoginResponse>(
         `${Configs.BASE_URL}${Configs.LOGIN_URL}`,
         {
           username: username,
@@ -44,7 +47,7 @@ export class AuthService {
         }
       )
       .pipe(
-        tap((response: HttpResponse<any>) => {
+        tap((response: HttpResponse<LoginResponse>) => {
           const jwtToken: string | null = response.headers.get('Authorization');
 
           if (!jwtToken) {
@@ -55,7 +58,11 @@ export class AuthService {
 
           const token = jwtToken.replace('Bearer ', '');
 
-          const body: LoginResponse = response.body;
+          const body = response.body;
+          if (!body) {
+            throw new Error('Login failed: Response body is null');
+          }
+
           const userId: string = body.userId;
           const email: string = body.email;
           const role: string = body.role;
@@ -93,9 +100,13 @@ export class AuthService {
       );
   }
 
-  register(username: string, email: string, password: string): Observable<any> {
+  register(
+    username: string,
+    email: string,
+    password: string
+  ): Observable<HttpResponse<void>> {
     return this.httpClient
-      .post<any>(
+      .post<void>(
         `${Configs.BASE_URL}${Configs.REGISTER_URL}`,
         {
           username: username,
@@ -139,9 +150,9 @@ export class AuthService {
       );
   }
 
-  getUserByUserName(username: string): Observable<any> {
+  getUserByUserName(username: string): Observable<HttpResponse<User>> {
     return this.httpClient
-      .get<any>(`${Configs.BASE_URL}${Configs.GET_BY_USERNAME}/${username}`, {
+      .get<User>(`${Configs.BASE_URL}${Configs.GET_BY_USERNAME}/${username}`, {
         observe: 'response',
       })
       .pipe(
@@ -151,6 +162,9 @@ export class AuthService {
               throw new Error('Error getting user data');
             }
             const user = response.body;
+            if (!user) {
+              throw new Error('User data is null');
+            }
             this._user.set({
               id: user.id,
               username: user.username,
@@ -169,9 +183,9 @@ export class AuthService {
       );
   }
 
-  deleteUserAccount(): Observable<any> {
+  deleteUserAccount(): Observable<HttpResponse<void>> {
     return this.httpClient
-      .delete<any>(
+      .delete<void>(
         `${Configs.BASE_URL}${Configs.USERS_ENDPOINT}/${this.user()!.id}`,
         {
           observe: 'response',
@@ -225,6 +239,7 @@ export class AuthService {
     try {
       return JSON.parse(atob(token.split('.')[1]));
     } catch (error) {
+      console.error('Error decoding token:', error);
       return null;
     }
   }

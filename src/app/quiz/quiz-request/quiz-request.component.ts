@@ -1,4 +1,4 @@
-import { Component, DestroyRef, effect, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
@@ -118,7 +118,7 @@ export class QuizRequestComponent implements OnInit {
     const sub = this.quizRequestService
       .deleteQuizRequest(userId, quizName)
       .subscribe({
-        error: (err) => {
+        error: () => {
           this.messageService.showErrorModal('Error deleting quiz request.');
         },
         complete: () => {

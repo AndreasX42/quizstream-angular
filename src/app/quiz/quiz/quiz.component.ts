@@ -67,7 +67,7 @@ export class QuizComponent {
         this.quizDeleted.emit();
         this.isDeleting.set(false);
       },
-      error: (err) => {
+      error: () => {
         this.isDeleting.set(false);
         this.messageService.showErrorModal(
           'Error deleting quiz "' + quiz.quizName + '".'
