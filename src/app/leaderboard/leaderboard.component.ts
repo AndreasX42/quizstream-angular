@@ -1,6 +1,5 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { LeaderboardService } from '../services/leaderboard.service';
-import { LeaderboardEntry } from '../models/leaderboard.model';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
 import { MatSelectModule } from '@angular/material/select';
@@ -18,7 +17,7 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
   templateUrl: './leaderboard.component.html',
   styleUrl: './leaderboard.component.scss',
 })
-export class LeaderboardComponent {
+export class LeaderboardComponent implements OnInit {
   private leaderboardService = inject(LeaderboardService);
 
   isLoading = this.leaderboardService.isLoadingLeaderboard.asReadonly();

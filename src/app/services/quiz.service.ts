@@ -7,6 +7,7 @@ import {
   QuizLanguage,
   QuizType,
   QuizUpdateRequestDto,
+  QuizRequest,
 } from './../models/quiz.model';
 import { AuthService } from './auth.service';
 import { HttpClient, HttpParams } from '@angular/common/http';
@@ -41,7 +42,7 @@ export class QuizService {
     size: number,
     sort: string
   ): Observable<Page<Quiz>> {
-    let params = new HttpParams()
+    const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString())
       .set('sort', sort);
@@ -67,7 +68,7 @@ export class QuizService {
       const currentProviderName = current.provider.toUpperCase() + '_API_KEY';
       obj[currentProviderName] = current.key;
       return obj;
-    }, {} as { [key: string]: string });
+    }, {} as Record<string, string>);
 
     const createQuizDto: QuizCreateRequestDto = {
       ...quizData,
@@ -105,8 +106,8 @@ export class QuizService {
     });
   }
 
-  createQuizRequest(requestDto: QuizCreateRequestDto): Observable<any> {
-    return this.httpClient.post<any>(
+  createQuizRequest(requestDto: QuizCreateRequestDto): Observable<QuizRequest> {
+    return this.httpClient.post<QuizRequest>(
       `${Configs.BASE_URL}${Configs.QUIZZES_ENDPOINT}/new`,
       {
         userId: requestDto.userId,
@@ -123,8 +124,8 @@ export class QuizService {
     );
   }
 
-  updateQuiz(requestDto: QuizUpdateRequestDto): Observable<any> {
-    return this.httpClient.put<any>(
+  updateQuiz(requestDto: QuizUpdateRequestDto): Observable<Quiz> {
+    return this.httpClient.put<Quiz>(
       `${Configs.BASE_URL}${Configs.QUIZZES_ENDPOINT}/update`,
       {
         userId: requestDto.userId,
@@ -146,7 +147,7 @@ export class QuizService {
     );
   }
 
-  getQuizDetails(quizId: string): Observable<any> {
+  getQuizDetails(quizId: string): Observable<QuizDetails> {
     return this.httpClient.get<QuizDetails>(
       `${Configs.BASE_URL}${Configs.QUIZZES_ENDPOINT}/${quizId}${
         Configs.USERS_ENDPOINT

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal, OnInit } from '@angular/core';
 import { QuizService } from '../../services/quiz.service';
 import {
   QuizDetails,
@@ -28,7 +28,7 @@ import { MatCardModule } from '@angular/material/card';
   templateUrl: './solve-quiz.component.html',
   styleUrl: './solve-quiz.component.scss',
 })
-export class SolveQuizComponent {
+export class SolveQuizComponent implements OnInit {
   private quizService = inject(QuizService);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
@@ -100,7 +100,7 @@ export class SolveQuizComponent {
     };
 
     const sub = this.quizService.updateQuiz(updateQuizDto).subscribe({
-      error: (err) => {
+      error: () => {
         this.messageService.showWarningModal(
           MessageService.MSG_ERROR_QUIZ_UPDATE_FAILED
         );
@@ -121,7 +121,7 @@ export class SolveQuizComponent {
         this.loadQuestion();
         this.isLoadingQuiz.set(false);
       },
-      error: (err) => {
+      error: () => {
         this.messageService.showErrorModal(
           MessageService.MSG_ERROR_LOADING_QUIZ
         );

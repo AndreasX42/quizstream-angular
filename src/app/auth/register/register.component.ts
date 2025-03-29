@@ -143,7 +143,7 @@ export class RegisterComponent {
       complete: () => {
         this.isRegistering.set(false);
       },
-      error: (err) => {
+      error: () => {
         this.isRegistering.set(false);
       },
     });

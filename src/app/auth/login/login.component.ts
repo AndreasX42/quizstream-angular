@@ -74,7 +74,7 @@ export class LoginComponent {
           replaceUrl: true,
         });
       },
-      error: (err) => {
+      error: () => {
         this.isLoggingIn.set(false);
       },
     });

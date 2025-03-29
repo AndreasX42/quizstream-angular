@@ -54,12 +54,12 @@ export class LeaderboardService {
   }
 
   getLeaderboardData(
-    page: number = 0,
-    size: number = 10,
-    sort: string = 'score',
-    dir: string = 'desc'
+    page = 0,
+    size = 10,
+    sort = 'score',
+    dir = 'desc'
   ): Observable<Page<LeaderboardEntry>> {
-    let params = new HttpParams()
+    const params = new HttpParams()
       .set('page', page.toString())
       .set('size', size.toString())
       .set('sort', `${sort},${dir}`);
