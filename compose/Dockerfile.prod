@@ -1,16 +1,16 @@
-FROM node:20-alpine AS build
+FROM public.ecr.aws/docker/library/node:20-alpine AS build
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --silent
+RUN npm ci --omit=dev --silent
 
 COPY ./ ./
 
 RUN npm run build --prod
 
-FROM nginx:alpine
+FROM public.ecr.aws/docker/library/nginx:alpine
 
 EXPOSE 80
 
