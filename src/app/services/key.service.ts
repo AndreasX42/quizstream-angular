@@ -2,7 +2,6 @@ import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { Key, KeyProvider } from './../models/key.model';
 import { Util } from '../shared/util';
 import { MessageService } from './message.service';
-import { Configs } from '../shared/api.configs';
 import { Router } from '@angular/router';
 
 @Injectable({
@@ -18,7 +17,7 @@ export class KeyService {
   keys = this._keys.asReadonly();
 
   constructor() {
-    const keyDftName = 'sk-...' + Configs.API_KEY.slice(125);
+    const keyDftName = 'Using default key provided';
     const keysString = localStorage.getItem(this.localStorageApiKeys);
 
     if (keysString) {
@@ -27,13 +26,11 @@ export class KeyService {
 
     if (
       !keysString ||
-      (Configs.API_KEY !== '' &&
-        this._keys().length === 1 &&
-        this._keys()[0].key === keyDftName) ||
+      (this._keys().length === 1 && this._keys()[0].key === keyDftName) ||
       this._keys().length === 0
     ) {
       this._keys.set([
-        { id: '0', provider: KeyProvider.OpenAI, key: Configs.API_KEY },
+        { id: '0', provider: KeyProvider.OpenAI, key: keyDftName },
       ]);
 
       localStorage.setItem(

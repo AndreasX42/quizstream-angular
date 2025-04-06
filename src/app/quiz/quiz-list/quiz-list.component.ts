@@ -71,7 +71,7 @@ export class QuizListComponent implements OnInit {
   selectedTabIndex = signal(0);
 
   sortBy = signal<string>('dateCreated,desc');
-  pageSize = signal<number>(3);
+  pageSize = signal<number>(5);
   currentPage = signal<number>(0);
   totalPages = signal<number>(0);
   totalItems = signal<number>(0);

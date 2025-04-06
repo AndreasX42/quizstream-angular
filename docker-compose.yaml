@@ -3,15 +3,15 @@ services:
   app:
     build:
       context: .
-      dockerfile: compose/Dockerfile.prod
+      dockerfile: compose/Dockerfile.dev
+      args:
+        API_URL: http://localhost:9090
     container_name: app
     ports:
-      - "80:80"
+      - "4200:4200"
     volumes:
       - ./:/app
       - /app/src/app/shared/environment
       - /app/node_modules
     environment:
-      - API_URL=http://localhost:9090
-      - API_KEY=xyz
       - CHOKIDAR_USEPOLLING=true

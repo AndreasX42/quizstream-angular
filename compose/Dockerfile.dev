@@ -1,5 +1,9 @@
 FROM node:20
 
+ARG API_URL
+
+ENV API_URL=${API_URL}
+
 EXPOSE 4200
 
 WORKDIR /app
@@ -12,4 +16,6 @@ RUN npm install -g @angular/cli
 
 RUN ng analytics off
 
-ENTRYPOINT ["sh", "-c", "node replace-env.js && ng serve --host 0.0.0.0 --poll 2000"]
+RUN sed -i "s|API_URL|${API_URL}|g" src/app/shared/environment/environment.ts
+
+ENTRYPOINT ["sh", "-c", "ng serve --host 0.0.0.0 --poll 2000"]

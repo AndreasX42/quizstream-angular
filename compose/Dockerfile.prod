@@ -1,5 +1,9 @@
 FROM public.ecr.aws/docker/library/node:20-alpine AS build
 
+ARG API_URL
+
+ENV API_URL=${API_URL}
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -7,6 +11,8 @@ COPY package*.json ./
 RUN npm ci --silent
 
 COPY ./ ./
+
+RUN sed -i "s|API_URL|${API_URL}|g" ./src/app/shared/environment/environment.ts
 
 RUN npm run build --prod
 
