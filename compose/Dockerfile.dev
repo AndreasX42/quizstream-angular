@@ -1,8 +1,14 @@
 FROM node:20
 
 ARG API_URL
+ARG NG_ENVIRONMENT
+ARG COGNITO_USER_POOL_ID
+ARG COGNITO_USER_POOL_CLIENT_ID
 
 ENV API_URL=${API_URL}
+ENV NG_ENVIRONMENT=${NG_ENVIRONMENT}
+ENV COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}
+ENV COGNITO_USER_POOL_CLIENT_ID=${COGNITO_USER_POOL_CLIENT_ID}
 
 EXPOSE 4200
 
@@ -17,5 +23,8 @@ RUN npm install -g @angular/cli
 RUN ng analytics off
 
 RUN sed -i "s|API_URL|${API_URL}|g" src/app/shared/environment/environment.ts
+RUN sed -i "s|NG_ENVIRONMENT|${NG_ENVIRONMENT}|g" src/app/shared/environment/environment.ts
+RUN sed -i "s|COGNITO_USER_POOL_ID|${COGNITO_USER_POOL_ID}|g" src/app/shared/environment/environment.ts
+RUN sed -i "s|COGNITO_USER_POOL_CLIENT_ID|${COGNITO_USER_POOL_CLIENT_ID}|g" src/app/shared/environment/environment.ts
 
 ENTRYPOINT ["sh", "-c", "ng serve --host 0.0.0.0 --poll 2000"]

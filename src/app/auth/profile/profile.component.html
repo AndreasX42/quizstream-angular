@@ -22,7 +22,15 @@
     </div>
 
     <div class="logout-button-container">
-      <button mat-raised-button color="warn" (click)="logout()">Logout</button>
+      <button
+        mat-raised-button
+        color="warn"
+        (click)="logout()"
+        [disabled]="isLoggingOut()"
+      >
+        <span *ngIf="!isLoggingOut()">Logout</span>
+        <mat-spinner *ngIf="isLoggingOut()" diameter="20"></mat-spinner>
+      </button>
     </div>
   </div>
 </div>

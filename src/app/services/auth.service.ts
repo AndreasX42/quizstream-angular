@@ -1,189 +1,264 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { HttpClient, HttpResponse, HttpStatusCode } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
-import { Configs } from '../shared/api.configs';
+import { catchError, Observable, throwError } from 'rxjs';
 import { User } from '../models/user.model';
 import { MessageService } from './message.service';
-import { LoginResponse } from '../models/login.response.model';
-
+import {
+  signUp,
+  confirmSignUp,
+  signIn,
+  getCurrentUser,
+  fetchUserAttributes,
+  signOut,
+  deleteUser,
+  fetchAuthSession,
+} from 'aws-amplify/auth';
+import { AuthUser } from '@aws-amplify/auth';
+import { KeyService } from './key.service';
+import { firstValueFrom } from 'rxjs';
+import { Configs } from '../shared/api.configs';
+import { HttpClient } from '@angular/common/http';
+import { HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { HttpStatusCode } from '@angular/common/http';
+import { map } from 'rxjs/operators';
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   _isLoggedIn = signal(false);
   _user = signal<User | undefined>(undefined);
-  _userToken = signal<string | undefined>(undefined);
+  _accessToken = signal<string | undefined>(undefined);
 
-  private httpClient = inject(HttpClient);
-  private router = inject(Router);
+  router = inject(Router);
   private messageService = inject(MessageService);
+  keyService = inject(KeyService);
+  httpClient = inject(HttpClient);
 
-  localStorageTokenKey = 'jwt-token';
-  localStorageUserKey = 'qs-user';
+  loginTime = signal<Date | undefined>(undefined);
+  expiryTime = signal<Date | undefined>(undefined);
+  localStorageLoginTimeKey = 'login-time';
+  localStorageTokenKey = 'access-token';
 
   isLoggedIn = this._isLoggedIn.asReadonly();
-  userToken = this._userToken.asReadonly();
   user = this._user.asReadonly();
+  accessToken = this._accessToken.asReadonly();
 
-  getJwtToken() {
-    return localStorage.getItem(this.localStorageTokenKey);
+  initializeSessionTimer(): void {
+    const loginTime = localStorage.getItem(this.localStorageLoginTimeKey);
+    const now = Date.now();
+    if (loginTime) {
+      this.loginTime.set(new Date(loginTime));
+      this.expiryTime.set(new Date(parseInt(loginTime) + 2 * 60 * 60 * 1000));
+    } else {
+      this.loginTime.set(new Date(now));
+      this.expiryTime.set(new Date(now + 2 * 60 * 60 * 1000));
+    }
   }
 
-  login(
-    username: string,
-    password: string
-  ): Observable<HttpResponse<LoginResponse>> {
-    return this.httpClient
-      .post<LoginResponse>(
-        `${Configs.BASE_URL}${Configs.LOGIN_URL}`,
-        {
-          username: username,
-          password: password,
-        },
-        {
-          observe: 'response',
-        }
-      )
-      .pipe(
-        tap((response: HttpResponse<LoginResponse>) => {
-          const jwtToken: string | null = response.headers.get('Authorization');
-
-          if (!jwtToken) {
-            throw new Error(
-              'Login failed: JWT token not found in the response.'
-            );
-          }
-
-          const token = jwtToken.replace('Bearer ', '');
-
-          const body = response.body;
-          if (!body) {
-            throw new Error('Login failed: Response body is null');
-          }
-
-          const userId: string = body.userId;
-          const email: string = body.email;
-          const role: string = body.role;
-
-          // Set authentication state
-          this._isLoggedIn.set(true);
-          this._userToken.set(token);
-          this._user.set({
-            id: userId,
-            username: username,
-            email: email,
-            role: role,
-          });
-
-          // Store the token and user data in localStorage
-          localStorage.setItem(this.localStorageTokenKey, token);
-          localStorage.setItem(
-            this.localStorageUserKey,
-            JSON.stringify(this.user())
-          );
-        }),
-        catchError((error) => {
-          let errorMessage = MessageService.MSG_ERROR_UNKOWN;
-          if (
-            typeof error.error === 'string' &&
-            error.error.includes('Incorrect')
-          ) {
-            errorMessage =
-              MessageService.MSG_ERROR_LOGIN_USERNAME_OR_PASSWORD_INCORRECT;
-          }
-
-          this.messageService.showErrorModal(errorMessage);
-          return throwError(() => new Error(errorMessage));
-        })
+  async checkSessionState(): Promise<void> {
+    try {
+      const session = await fetchAuthSession();
+      if (!session.tokens) {
+        throw new Error('Session invalid or expired');
+      }
+      this._accessToken.set(session.tokens.accessToken.toString());
+      localStorage.setItem(
+        this.localStorageTokenKey,
+        session.tokens.accessToken.toString()
       );
+    } catch (err) {
+      console.error('Auth session invalid:', err);
+      this.messageService.showErrorModal(
+        MessageService.MSG_ERROR_SESSION_EXPIRED
+      );
+      await this.performLogout();
+      return;
+    }
+  }
+  async restoreSession(): Promise<void> {
+    try {
+      const user = await getCurrentUser();
+      await this.setAuthDetails(user);
+      await this.checkSessionState();
+    } catch (error: unknown) {
+      console.log('No active Cognito session', error);
+      this.messageService.showErrorModal(
+        MessageService.MSG_ERROR_SESSION_EXPIRED
+      );
+      await this.performLogout();
+      this.deleteAuthDetails();
+    }
   }
 
-  register(
+  async performDeleteAccount(): Promise<void> {
+    try {
+      // Step 1: Delete user in Cognito
+      await deleteUser();
+      console.log('User deleted from Cognito');
+
+      // Step 2: Delete user in Spring Boot
+      await firstValueFrom(this.deleteUserInSB());
+      console.log('User deleted from SpringBoot');
+
+      // Step 3: Clean up and navigate to login
+      this.deleteAuthDetails();
+      this.router.navigate(['/login'], { replaceUrl: true });
+      this.messageService.showSuccessModal(
+        MessageService.MSG_SUCCESS_DELETE_USER_ACCOUNT
+      );
+
+      console.log('User account successfully deleted');
+    } catch (error: unknown) {
+      this.messageService.showErrorModal(
+        MessageService.MSG_ERROR_DELETE_USER_ACCOUNT
+      );
+      this.router.navigate(['/profile'], { replaceUrl: true });
+
+      console.error('Error deleting user:', error);
+      throw error instanceof Error
+        ? error
+        : new Error('Unknown error, could not delete user');
+    }
+  }
+
+  async setAuthDetails(user: AuthUser) {
+    const attributes = await fetchUserAttributes();
+    this.initializeSessionTimer();
+    this._isLoggedIn.set(true);
+    this._user.set({
+      id: user.userId,
+      username: user.username,
+      email: attributes.email || '',
+      role: 'user',
+    });
+  }
+
+  deleteAuthDetails() {
+    this._isLoggedIn.set(false);
+    this._user.set(undefined);
+    localStorage.removeItem(this.localStorageLoginTimeKey);
+    localStorage.removeItem(this.localStorageTokenKey);
+    localStorage.removeItem(this.keyService.localStorageApiKeys);
+    this.loginTime.set(undefined);
+    this.expiryTime.set(undefined);
+    this._accessToken.set(undefined);
+  }
+
+  async performSignUp(
     username: string,
     email: string,
     password: string
+  ): Promise<{ success: boolean; needsConfirmation: boolean }> {
+    try {
+      const response = await signUp({
+        username,
+        password,
+        options: {
+          userAttributes: {
+            email,
+          },
+        },
+      });
+
+      // After Cognito sign-up, register the user in Spring Boot
+      await firstValueFrom(
+        this.registerUserInSB(response.userId || '', username, email)
+      );
+      console.log('Successfully registered user in SpringBoot');
+
+      if (
+        response.isSignUpComplete ||
+        response.nextStep.signUpStep === 'DONE'
+      ) {
+        this.router.navigate(['/login'], { replaceUrl: true });
+        return { success: true, needsConfirmation: false };
+      }
+
+      return { success: true, needsConfirmation: true };
+    } catch (error: unknown) {
+      console.error('Error during signup or registration in SB:', error);
+      await deleteUser(); // delete user from Cognito
+      throw error;
+    }
+  }
+
+  async performConfirmSignUp(username: string, code: string) {
+    try {
+      const response = await confirmSignUp({
+        username,
+        confirmationCode: code,
+      });
+
+      console.log('Confirm sign up response:', response);
+      this.router.navigate(['/login'], { replaceUrl: true });
+      return { success: true };
+    } catch (error: unknown) {
+      console.error('Error confirming sign up:', error);
+      throw error;
+    }
+  }
+
+  async performLogin(username: string, password: string) {
+    try {
+      const response = await signIn({
+        username,
+        password,
+      });
+
+      const user = await getCurrentUser();
+
+      localStorage.setItem(
+        this.localStorageLoginTimeKey,
+        Date.now().toString()
+      );
+
+      await this.checkSessionState();
+
+      if (response.isSignedIn) {
+        await this.setAuthDetails(user);
+        this.router.navigate(['/profile'], { replaceUrl: true });
+        return { success: true };
+      }
+
+      return { success: false };
+    } catch (error: unknown) {
+      console.error('Error signing in:', error);
+      throw error;
+    }
+  }
+
+  async performLogout(): Promise<void> {
+    await signOut();
+    this.deleteAuthDetails();
+    this.router.navigate(['/'], { replaceUrl: true });
+  }
+
+  // Legacy auth to make it compatible with Cognito
+
+  registerUserInSB(
+    id: string,
+    username: string,
+    email: string
   ): Observable<HttpResponse<void>> {
     return this.httpClient
       .post<void>(
         `${Configs.BASE_URL}${Configs.REGISTER_URL}`,
         {
+          id: id,
           username: username,
           email: email,
-          password: password,
         },
-        {
-          observe: 'response',
-        }
+        { observe: 'response' }
       )
       .pipe(
-        tap({
-          next: (response) => {
-            if (response.status !== 201) {
-              throw new Error('Error in registration');
-            }
-          },
-          complete: () => {
-            this.router.navigate(['/login'], {
-              replaceUrl: true,
-            });
-
-            this.messageService.showSuccessModal(
-              MessageService.MSG_SUCCESS_REGISTER
-            );
-          },
-        }),
-        catchError((error) => {
-          let errorMessage = MessageService.MSG_ERROR_UNKOWN;
-          if (
-            error.error &&
-            error.error.messages &&
-            Array.isArray(error.error.messages)
-          ) {
-            errorMessage = error.error.messages.join('\n');
-          }
-
-          this.messageService.showErrorModal(errorMessage);
-          return throwError(() => new Error(errorMessage));
+        catchError((error: HttpErrorResponse) => {
+          console.error('Error registering user in SpringBoot:', error);
+          return throwError(() => error);
         })
       );
   }
 
-  getUserByUserName(username: string): Observable<HttpResponse<User>> {
-    return this.httpClient
-      .get<User>(`${Configs.BASE_URL}${Configs.GET_BY_USERNAME}/${username}`, {
-        observe: 'response',
-      })
-      .pipe(
-        tap({
-          next: (response) => {
-            if (response.status !== 200) {
-              throw new Error('Error getting user data');
-            }
-            const user = response.body;
-            if (!user) {
-              throw new Error('User data is null');
-            }
-            this._user.set({
-              id: user.id,
-              username: user.username,
-              email: user.email,
-              role: user.role,
-            });
-          },
-        }),
-        catchError((error) => {
-          this.messageService.showErrorModal(
-            MessageService.MSG_ERROR_LOAD_PROFILE_DATA
-          );
-          this.router.navigate(['/']);
-          return throwError(() => new Error(error.message));
-        })
-      );
-  }
-
-  deleteUserAccount(): Observable<HttpResponse<void>> {
+  deleteUserInSB(): Observable<HttpResponse<void>> {
     return this.httpClient
       .delete<void>(
         `${Configs.BASE_URL}${Configs.USERS_ENDPOINT}/${this.user()!.id}`,
@@ -192,72 +267,16 @@ export class AuthService {
         }
       )
       .pipe(
-        tap({
-          next: (response) => {
-            if (response.status !== HttpStatusCode.NoContent) {
-              throw new Error('Error deleting user');
-            }
-          },
+        map((response) => {
+          if (response.status !== HttpStatusCode.NoContent) {
+            throw new Error('Error deleting user in SpringBoot');
+          }
+          return response;
         }),
+
         catchError((error) => {
-          this.messageService.showErrorModal(
-            MessageService.MSG_ERROR_DELETE_USER_ACCOUNT
-          );
-          this.router.navigate(['/profile'], { replaceUrl: true });
-          return throwError(() => new Error(error.message));
+          return throwError(() => error);
         })
       );
-  }
-
-  deleteAuthDetails() {
-    this._isLoggedIn.set(false);
-    this._userToken.set(undefined);
-    this._user.set(undefined);
-    localStorage.removeItem(this.localStorageTokenKey);
-    localStorage.removeItem(this.localStorageUserKey);
-  }
-
-  logout(): void {
-    if (this.isTokenExpired()) {
-      this.messageService.showWarningModal(
-        MessageService.MSG_ERROR_SESSION_EXPIRED
-      );
-    }
-
-    this.deleteAuthDetails();
-    this.router.navigate(['/login'], { replaceUrl: true });
-  }
-
-  // Helper method to decode the JWT
-  decodeToken() {
-    const token = localStorage.getItem(this.localStorageTokenKey);
-
-    if (!token) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(atob(token.split('.')[1]));
-    } catch (error) {
-      console.error('Error decoding token:', error);
-      return null;
-    }
-  }
-
-  // Helper method to check if the token is expired
-  isTokenExpired(): boolean {
-    const token = localStorage.getItem(this.localStorageTokenKey);
-
-    if (!token) {
-      return false;
-    }
-
-    const decodedToken = this.decodeToken();
-    if (!decodedToken) {
-      return true;
-    }
-
-    const expiryTime = decodedToken.exp * 1000;
-    return expiryTime < Date.now();
   }
 }

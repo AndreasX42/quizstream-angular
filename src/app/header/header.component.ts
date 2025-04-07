@@ -30,7 +30,7 @@ export class HeaderComponent {
     this.themeService.toggleThemeByName(theme);
   }
 
-  logout(): void {
-    this.authService.logout();
+  async logout(): Promise<void> {
+    await this.authService.performLogout();
   }
 }

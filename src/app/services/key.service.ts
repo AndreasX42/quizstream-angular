@@ -11,7 +11,7 @@ export class KeyService {
   private messageService = inject(MessageService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
-  private localStorageApiKeys = 'api-keys';
+  localStorageApiKeys = 'api-keys';
 
   private _keys = signal<Key[]>([]);
   keys = this._keys.asReadonly();

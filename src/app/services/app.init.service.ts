@@ -7,22 +7,15 @@ import { AuthService } from './auth.service';
 export class AppInitService {
   private authService = inject(AuthService);
 
-  initApp(): void {
-    const token: string | null = localStorage.getItem(
-      this.authService.localStorageTokenKey
-    );
-    const userString: string | null = localStorage.getItem(
-      this.authService.localStorageUserKey
-    );
+  async initApp(): Promise<void> {
+    const isAccessTokenPresent =
+      localStorage.getItem(this.authService.localStorageTokenKey) !== null;
 
-    if (!token || !userString) {
-      this.authService.deleteAuthDetails();
-    } else if (this.authService.isTokenExpired()) {
-      this.authService.logout();
+    if (!isAccessTokenPresent) {
+      await this.authService.deleteAuthDetails();
+      await this.authService.performLogout();
     } else {
-      this.authService._isLoggedIn.set(true);
-      this.authService._userToken.set(token);
-      this.authService._user.set(JSON.parse(userString));
+      await this.authService.restoreSession();
     }
   }
 }

@@ -5,13 +5,17 @@ services:
       context: .
       dockerfile: compose/Dockerfile.dev
       args:
-        API_URL: http://localhost:9090
+        API_URL: ${API_URL}
+        NG_ENVIRONMENT: ${NG_ENVIRONMENT}
+        COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID}
+        COGNITO_USER_POOL_CLIENT_ID: ${COGNITO_USER_POOL_CLIENT_ID}
     container_name: app
     ports:
       - "4200:4200"
     volumes:
       - ./:/app
       - /app/src/app/shared/environment
+      - /app/.angular
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true

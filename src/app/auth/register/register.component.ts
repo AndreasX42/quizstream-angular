@@ -60,6 +60,8 @@ export class RegisterComponent {
   emailErrorMessage = signal<string | undefined>(undefined);
   pwdErrorMessage = signal<string | undefined>(undefined);
   confirmPwdErrorMessage = signal<string | undefined>(undefined);
+  verificationCodeErrorMessage = signal<string | undefined>(undefined);
+  showVerificationCode = signal(false);
 
   form = new FormGroup({
     username: new FormControl('', {
@@ -81,6 +83,12 @@ export class RegisterComponent {
         validators: [equalValues('password', 'confirmPassword')],
       }
     ),
+    verificationCode: new FormControl(
+      { value: '', disabled: true },
+      {
+        validators: [Validators.required, Validators.minLength(6)],
+      }
+    ),
   });
 
   updateUsernameErrorMessage = ErrorManagerFactory.getFormErrorManager(
@@ -89,6 +97,8 @@ export class RegisterComponent {
     {
       required: ErrorManagerFactory.MSG_IS_REQUIRED,
       minlength: ErrorManagerFactory.MSG_AT_LEAST_3_CHARS,
+      invalidUsername: 'Username invalid or already used',
+      unknownAmplifyError: 'An unexpected error occurred',
     }
   );
 
@@ -98,6 +108,7 @@ export class RegisterComponent {
     {
       required: ErrorManagerFactory.MSG_IS_REQUIRED,
       email: ErrorManagerFactory.MSG_VALID_EMAIL,
+      invalidEmailOrInUse: 'Email invalid or already used',
     }
   );
 
@@ -107,6 +118,7 @@ export class RegisterComponent {
     {
       required: ErrorManagerFactory.MSG_IS_REQUIRED,
       minlength: ErrorManagerFactory.MSG_AT_LEAST_6_CHARS,
+      passwordPolicy: 'Password invalid',
     }
   );
 
@@ -120,37 +132,121 @@ export class RegisterComponent {
     }
   );
 
-  onSubmit() {
+  updateVerificationCodeErrorMessage = ErrorManagerFactory.getFormErrorManager(
+    this.form.get('verificationCode')!,
+    this.verificationCodeErrorMessage.set,
+    {
+      required: ErrorManagerFactory.MSG_IS_REQUIRED,
+      minlength: ErrorManagerFactory.MSG_AT_LEAST_6_CHARS,
+      codeMismatch: 'Invalid verification code',
+      codeExpired: 'Code has expired',
+      alreadyConfirmed: 'User already confirmed',
+      userNotFound: 'User not found',
+      unknownAmplifyError: 'An unexpected error occurred',
+    }
+  );
+
+  async onSubmit() {
     if (this.form.invalid) {
       // update error messages for all form fields
       this.updateUsernameErrorMessage();
       this.updateEmailErrorMessage();
       this.updatePwdErrorMessage();
       this.updateConfirmPwdErrorMessage();
+      if (this.showVerificationCode()) {
+        this.updateVerificationCodeErrorMessage();
+      }
       return;
     }
 
-    const username = this.form.value.username!;
-    const email = this.form.value.email!;
-    const password = this.form.value.passwords!.password!;
+    const formValues = this.form.getRawValue();
+    const username = formValues.username!;
+    const email = formValues.email!;
+    const password = formValues.passwords!.password!;
 
-    this.register(username, email, password);
-  }
+    try {
+      this.isRegistering.set(true);
 
-  register(username: string, email: string, password: string) {
-    this.isRegistering.set(true);
-    const sub = this.authService.register(username, email, password).subscribe({
-      complete: () => {
-        this.isRegistering.set(false);
-      },
-      error: () => {
-        this.isRegistering.set(false);
-      },
-    });
+      if (!this.showVerificationCode()) {
+        const result = await this.authService.performSignUp(
+          username,
+          email,
+          password
+        );
+        if (result.needsConfirmation) {
+          this.showVerificationCode.set(true);
+          this.form.get('verificationCode')?.enable();
+          this.form.get('username')?.disable();
+          this.form.get('email')?.disable();
+          this.form.get('passwords')?.disable();
+        }
+      } else {
+        const verificationCode = formValues.verificationCode!;
+        await this.authService.performConfirmSignUp(username, verificationCode);
+      }
+    } catch (error: unknown) {
+      console.error('Error:', error);
 
-    this.destroyRef.onDestroy(() => {
-      sub.unsubscribe();
-    });
+      if (error && typeof error === 'object' && 'name' in error) {
+        const amplifyError = error as { name: string; message: string };
+
+        if (!this.showVerificationCode()) {
+          const usernameControl = this.form.get('username')!;
+          const emailControl = this.form.get('email')!;
+          const pwdControl = this.form.get('passwords.password')!;
+
+          switch (amplifyError.name) {
+            case 'UsernameExistsException':
+              usernameControl.setErrors({ invalidUsername: true });
+              this.updateUsernameErrorMessage();
+              break;
+            case 'InvalidPasswordException':
+              pwdControl.setErrors({ passwordPolicy: true });
+              this.updatePwdErrorMessage();
+              break;
+            case 'InvalidParameterException':
+              emailControl.setErrors({ invalidEmailOrInUse: true });
+              this.updateEmailErrorMessage();
+              break;
+            default:
+              usernameControl.setErrors({ unknownAmplifyError: true });
+              this.updateUsernameErrorMessage();
+          }
+        } else {
+          const verificationControl = this.form.get('verificationCode')!;
+
+          switch (amplifyError.name) {
+            case 'CodeMismatchException':
+              verificationControl.setErrors({ codeMismatch: true });
+              break;
+            case 'ExpiredCodeException':
+              verificationControl.setErrors({ codeExpired: true });
+              break;
+            case 'NotAuthorizedException':
+              verificationControl.setErrors({ alreadyConfirmed: true });
+              break;
+            case 'UserNotFoundException':
+              verificationControl.setErrors({ userNotFound: true });
+              break;
+            default:
+              verificationControl.setErrors({ unknownAmplifyError: true });
+          }
+          this.updateVerificationCodeErrorMessage();
+        }
+      } else {
+        if (!this.showVerificationCode()) {
+          this.form.get('username')!.setErrors({ unknownAmplifyError: true });
+          this.updateUsernameErrorMessage();
+        } else {
+          this.form
+            .get('verificationCode')!
+            .setErrors({ unknownAmplifyError: true });
+          this.updateVerificationCodeErrorMessage();
+        }
+      }
+    } finally {
+      this.isRegistering.set(false);
+    }
   }
 
   onHide(event: MouseEvent) {

@@ -51,7 +51,7 @@ export class LoginComponent {
     }),
   });
 
-  onSubmit() {
+  async onSubmit() {
     if (this.form.invalid) {
       // update error messages of all form fields
       this.updateUsernameErrorMessage();
@@ -62,26 +62,43 @@ export class LoginComponent {
     const username = this.form.value.username!;
     const password = this.form.value.password!;
 
-    this.login(username, password);
-  }
+    try {
+      this.isLoggingIn.set(true);
+      await this.authService.performLogin(username, password);
+    } catch (error: unknown) {
+      console.error('Error:', error);
 
-  login(username: string, password: string) {
-    this.isLoggingIn.set(true);
-    const sub = this.authService.login(username, password).subscribe({
-      next: () => {
-        this.isLoggingIn.set(false);
-        this.router.navigate(['/profile'], {
-          replaceUrl: true,
-        });
-      },
-      error: () => {
-        this.isLoggingIn.set(false);
-      },
-    });
+      if (error && typeof error === 'object' && 'name' in error) {
+        const amplifyError = error as { name: string; message: string };
 
-    this.destroyRef.onDestroy(() => {
-      sub.unsubscribe();
-    });
+        switch (amplifyError.name) {
+          case 'UserNotConfirmedException':
+            this.form.get('username')!.setErrors({ userNotConfirmed: true });
+            this.updateUsernameErrorMessage();
+            break;
+          case 'UserAlreadyAuthenticatedException':
+            this.form.get('username')!.setErrors({ userSignedIn: true });
+            this.updateUsernameErrorMessage();
+            break;
+          case 'NotAuthorizedException':
+            this.form.get('password')!.setErrors({ invalidCredentials: true });
+            this.updatePwdErrorMessage();
+            break;
+          case 'UserNotFoundException':
+            this.form.get('username')!.setErrors({ userInvalid: true });
+            this.updateUsernameErrorMessage();
+            break;
+          default:
+            this.form.get('username')!.setErrors({ unknownAmplifyError: true });
+            this.updateUsernameErrorMessage();
+        }
+      } else {
+        this.form.get('username')!.setErrors({ unknownAmplifyError: true });
+        this.updateUsernameErrorMessage();
+      }
+    } finally {
+      this.isLoggingIn.set(false);
+    }
   }
 
   onHide(event: MouseEvent) {
@@ -95,14 +112,20 @@ export class LoginComponent {
     {
       required: ErrorManagerFactory.MSG_IS_REQUIRED,
       minlength: ErrorManagerFactory.MSG_AT_LEAST_3_CHARS,
+      userNotConfirmed: 'Please confirm your email address',
+      userInvalid: 'Username invalid or not found',
+      unknownAmplifyError: 'An unexpected error occurred',
+      userSignedIn: 'User already signed in',
     }
   );
+
   updatePwdErrorMessage = ErrorManagerFactory.getFormErrorManager(
     this.form.get('password')!,
     this.pwdErrorMessage.set,
     {
       required: ErrorManagerFactory.MSG_IS_REQUIRED,
       minlength: ErrorManagerFactory.MSG_AT_LEAST_6_CHARS,
+      invalidCredentials: 'Invalid username or password',
     }
   );
 }

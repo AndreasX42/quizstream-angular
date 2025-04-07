@@ -7,11 +7,20 @@ import { ThemeService } from '../../services/theme.service';
 import { MessageService } from '../../services/message.service';
 import { TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [MatButton, MatSlideToggleModule, TitleCasePipe, RouterLink],
+  imports: [
+    MatButton,
+    MatSlideToggleModule,
+    TitleCasePipe,
+    RouterLink,
+    MatProgressSpinnerModule,
+    CommonModule,
+  ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
 })
@@ -28,56 +37,46 @@ export class ProfileComponent implements OnInit {
 
   sessionTimeLeft = signal<string | undefined>(undefined);
   user = this.authService.user;
+  isLoggingOut = signal(false);
 
   ngOnInit(): void {
     this.initializeSessionTimer();
   }
 
-  logout(): void {
-    this.authService.logout();
+  async logout(): Promise<void> {
+    this.isLoggingOut.set(true);
+    await this.authService.performLogout();
+    this.isLoggingOut.set(false);
   }
 
-  deleteAccount(): void {
+  deleteAccount() {
     const dialogRef = this.messageService.showConfirmModal(
       MessageService.MSG_WARNING_DELETE_USER_ACCOUNT
     );
 
-    dialogRef.afterClosed().subscribe((confirm) => {
+    dialogRef.afterClosed().subscribe(async (confirm) => {
       if (!confirm) {
         return;
       }
 
-      const sub = this.authService.deleteUserAccount().subscribe({
-        complete: () => {
-          this.authService.logout();
-          this.messageService.showSuccessModal(
-            MessageService.MSG_SUCCESS_DELETE_USER_ACCOUNT
-          );
-        },
-      });
-
-      this.destroyRef.onDestroy(() => {
-        sub.unsubscribe();
-      });
+      await this.authService.performDeleteAccount();
+      await this.authService.performLogout();
     });
   }
 
   initializeSessionTimer(): void {
-    const token = this.authService.getJwtToken();
-    if (token) {
-      const decodedToken = this.authService.decodeToken();
-
-      const expiryTime = decodedToken.exp * 1000;
-
-      const sub = interval(1000).subscribe(() => {
+    const loginTime = this.authService.loginTime();
+    const expiryTime = this.authService.expiryTime();
+    if (loginTime && expiryTime) {
+      const sub = interval(1000).subscribe(async () => {
         const currentTime = Date.now();
-        const timeLeft = expiryTime - currentTime;
+        const timeLeft = expiryTime.getTime() - currentTime;
 
         if (timeLeft > 0) {
           this.sessionTimeLeft.set(this.formatTimeLeft(timeLeft));
         } else {
           this.sessionTimeLeft.set('Session expired');
-          this.authService.logout();
+          await this.authService.performLogout();
         }
       });
 

@@ -111,9 +111,31 @@
         }
       </mat-form-field>
     </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="fill" class="mat-form-field-text">
+        <mat-label>Verification Code</mat-label>
+        <input
+          matInput
+          id="verificationCode"
+          type="text"
+          name="verificationCode"
+          formControlName="verificationCode"
+          (blur)="updateVerificationCodeErrorMessage()"
+          placeholder="Enter the code sent to your email"
+        />
+
+        @if(verificationCodeErrorMessage() !== '') {
+        <mat-error>{{ verificationCodeErrorMessage() }}</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
     <div class="form-row">
       <button mat-raised-button color="primary" [disabled]="isRegistering()">
-        <span *ngIf="!isRegistering()">Submit</span>
+        <span *ngIf="!isRegistering()">{{
+          showVerificationCode() ? "Confirm" : "Register"
+        }}</span>
         <mat-spinner *ngIf="isRegistering()" diameter="20"></mat-spinner>
       </button>
     </div>
