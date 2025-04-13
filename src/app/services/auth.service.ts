@@ -18,9 +18,10 @@ import { KeyService } from './key.service';
 import { firstValueFrom } from 'rxjs';
 import { Configs } from '../shared/api.configs';
 import { HttpClient } from '@angular/common/http';
-import { HttpResponse, HttpErrorResponse } from '@angular/common/http';
+import { HttpResponse } from '@angular/common/http';
 import { HttpStatusCode } from '@angular/common/http';
 import { map } from 'rxjs/operators';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -92,13 +93,13 @@ export class AuthService {
 
   async performDeleteAccount(): Promise<void> {
     try {
-      // Step 1: Delete user in Cognito
-      await deleteUser();
-      console.log('User deleted from Cognito');
-
-      // Step 2: Delete user in Spring Boot
+      // Step 1: Delete user in Spring Boot
       await firstValueFrom(this.deleteUserInSB());
       console.log('User deleted from SpringBoot');
+
+      // Step 2: Delete user in Cognito
+      await deleteUser();
+      console.log('User deleted from Cognito');
 
       // Step 3: Clean up and navigate to login
       this.deleteAuthDetails();
@@ -160,12 +161,6 @@ export class AuthService {
         },
       });
 
-      // After Cognito sign-up, register the user in Spring Boot
-      await firstValueFrom(
-        this.registerUserInSB(response.userId || '', username, email)
-      );
-      console.log('Successfully registered user in SpringBoot');
-
       if (
         response.isSignUpComplete ||
         response.nextStep.signUpStep === 'DONE'
@@ -176,7 +171,7 @@ export class AuthService {
 
       return { success: true, needsConfirmation: true };
     } catch (error: unknown) {
-      console.error('Error during signup or registration in SB:', error);
+      console.error('Error during signup', error);
       await deleteUser(); // delete user from Cognito
       throw error;
     }
@@ -231,31 +226,6 @@ export class AuthService {
     await signOut();
     this.deleteAuthDetails();
     this.router.navigate(['/'], { replaceUrl: true });
-  }
-
-  // Legacy auth to make it compatible with Cognito
-
-  registerUserInSB(
-    id: string,
-    username: string,
-    email: string
-  ): Observable<HttpResponse<void>> {
-    return this.httpClient
-      .post<void>(
-        `${Configs.BASE_URL}${Configs.REGISTER_URL}`,
-        {
-          id: id,
-          username: username,
-          email: email,
-        },
-        { observe: 'response' }
-      )
-      .pipe(
-        catchError((error: HttpErrorResponse) => {
-          console.error('Error registering user in SpringBoot:', error);
-          return throwError(() => error);
-        })
-      );
   }
 
   deleteUserInSB(): Observable<HttpResponse<void>> {
