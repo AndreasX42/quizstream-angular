@@ -47,12 +47,9 @@ export class QuizService {
       .set('size', size.toString())
       .set('sort', sort);
 
-    return this.httpClient.get<Page<Quiz>>(
-      `${Configs.BASE_URL}${Configs.GET_ALL_QUIZZES_BY_USER_ID}/${userId}`,
-      {
-        params,
-      }
-    );
+    return this.httpClient.get<Page<Quiz>>(Configs.getUserQuizBaseUrl(userId), {
+      params,
+    });
   }
 
   addQuiz(quizData: {
@@ -108,9 +105,10 @@ export class QuizService {
 
   createQuizRequest(requestDto: QuizCreateRequestDto): Observable<QuizRequest> {
     return this.httpClient.post<QuizRequest>(
-      `${Configs.BASE_URL}${Configs.QUIZZES_ENDPOINT}/new`,
+      Configs.getUserQuizBaseUrl(this.authService.user()!.id),
       {
         userId: requestDto.userId,
+        username: this.authService.user()!.username,
         quizName: requestDto.quizName.toLowerCase(),
         videoUrl: requestDto.videoUrl,
         apiKeys: requestDto.apiKeys,
@@ -126,7 +124,7 @@ export class QuizService {
 
   updateQuiz(requestDto: QuizUpdateRequestDto): Observable<Quiz> {
     return this.httpClient.put<Quiz>(
-      `${Configs.BASE_URL}${Configs.QUIZZES_ENDPOINT}/update`,
+      Configs.getUserQuizBaseUrl(this.authService.user()!.id),
       {
         userId: requestDto.userId,
         quizId: requestDto.quizId,
@@ -141,17 +139,13 @@ export class QuizService {
 
   deleteQuiz(quizId: string): Observable<void> {
     return this.httpClient.delete<void>(
-      `${Configs.BASE_URL}${Configs.QUIZZES_ENDPOINT}/${quizId}${
-        Configs.USERS_ENDPOINT
-      }/${this.authService.user()!.id}`
+      Configs.getUserQuizUrl(this.authService.user()!.id, quizId)
     );
   }
 
   getQuizDetails(quizId: string): Observable<QuizDetails> {
     return this.httpClient.get<QuizDetails>(
-      `${Configs.BASE_URL}${Configs.QUIZZES_ENDPOINT}/${quizId}${
-        Configs.USERS_ENDPOINT
-      }/${this.authService.user()!.id}${Configs.QUIZ_DETAILS_ENDPOINT}`
+      Configs.getUserQuizDetailsUrl(this.authService.user()!.id, quizId)
     );
   }
 }

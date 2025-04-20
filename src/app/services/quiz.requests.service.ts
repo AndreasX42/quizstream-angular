@@ -143,7 +143,7 @@ export class QuizRequestService {
     }
 
     return this.httpClient.get<Page<QuizRequest>>(
-      `${Configs.BASE_URL}${Configs.QUIZ_REQUESTS}${Configs.USERS_ENDPOINT}/${userId}`,
+      Configs.getUserQuizRequestsUrl(userId),
       {
         params,
       }
@@ -157,7 +157,7 @@ export class QuizRequestService {
 
     return this.httpClient.request<void>(
       'DELETE',
-      `${Configs.BASE_URL}${Configs.QUIZ_REQUESTS}`,
+      Configs.getUserQuizRequestsUrl(this.authService.user()!.id),
       body
     );
   }

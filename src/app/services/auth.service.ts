@@ -76,11 +76,12 @@ export class AuthService {
       return;
     }
   }
-  async restoreSession(): Promise<void> {
+  async restoreSession(): Promise<boolean> {
     try {
       const user = await getCurrentUser();
       await this.setAuthDetails(user);
       await this.checkSessionState();
+      return true;
     } catch (error: unknown) {
       console.log('No active Cognito session', error);
       this.messageService.showErrorModal(
@@ -88,6 +89,7 @@ export class AuthService {
       );
       await this.performLogout();
       this.deleteAuthDetails();
+      return false;
     }
   }
 
@@ -230,12 +232,9 @@ export class AuthService {
 
   deleteUserInSB(): Observable<HttpResponse<void>> {
     return this.httpClient
-      .delete<void>(
-        `${Configs.BASE_URL}${Configs.USERS_ENDPOINT}/${this.user()!.id}`,
-        {
-          observe: 'response',
-        }
-      )
+      .delete<void>(Configs.getUserBaseUrl(this.user()!.id), {
+        observe: 'response',
+      })
       .pipe(
         map((response) => {
           if (response.status !== HttpStatusCode.NoContent) {

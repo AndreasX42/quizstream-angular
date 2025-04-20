@@ -11,11 +11,11 @@ export class AppInitService {
     const isAccessTokenPresent =
       localStorage.getItem(this.authService.localStorageTokenKey) !== null;
 
-    if (!isAccessTokenPresent) {
-      await this.authService.deleteAuthDetails();
-      await this.authService.performLogout();
-    } else {
-      await this.authService.restoreSession();
+    if (isAccessTokenPresent) {
+      const isSessionRestored = await this.authService.restoreSession();
+      if (!isSessionRestored) {
+        await this.authService.performLogout();
+      }
     }
   }
 }

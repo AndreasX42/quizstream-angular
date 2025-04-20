@@ -65,7 +65,7 @@ export class LeaderboardService {
       .set('sort', `${sort},${dir}`);
 
     return this.httpClient.get<Page<LeaderboardEntry>>(
-      `${Configs.BASE_URL}${Configs.LEADERBOARD}`,
+      Configs.getLeaderboardUrl(),
       {
         params,
       }

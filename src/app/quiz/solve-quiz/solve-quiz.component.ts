@@ -121,7 +121,8 @@ export class SolveQuizComponent implements OnInit {
         this.loadQuestion();
         this.isLoadingQuiz.set(false);
       },
-      error: () => {
+      error: (e) => {
+        console.log('Error loading quiz details', e);
         this.messageService.showErrorModal(
           MessageService.MSG_ERROR_LOADING_QUIZ
         );
