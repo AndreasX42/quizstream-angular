@@ -91,7 +91,12 @@ export class QuizRequestService {
       ),
       takeWhile(
         (reqList) =>
-          reqList.content.some((req) => req.status === RequestStatus.CREATING),
+          reqList.content.some(
+            (req) =>
+              req.status === RequestStatus.CREATING ||
+              req.status === RequestStatus.QUEUED ||
+              req.status === RequestStatus.PROCESSING
+          ),
         true
       ),
       timeout(300000),

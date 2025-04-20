@@ -79,6 +79,8 @@ export enum QuizDifficulty {
 export enum RequestStatus {
   ALL = 'ALL',
   CREATING = 'CREATING',
+  QUEUED = 'QUEUED',
+  PROCESSING = 'PROCESSING',
   FINISHED = 'FINISHED',
   FAILED = 'FAILED',
 }
@@ -106,6 +108,10 @@ export function getEnumDisplayName(
       return 'Finished';
     case RequestStatus.FAILED:
       return 'Failed';
+    case RequestStatus.QUEUED:
+      return 'Queued';
+    case RequestStatus.PROCESSING:
+      return 'Processing';
 
     // QuizDifficulty cases
     case QuizDifficulty.EASY:
