@@ -73,7 +73,7 @@
               else showStatus
             "
           >
-            <span>{{ getEnumDisplayName(request.status) }}</span>
+            <span>{{ request.status }}</span>
             <mat-progress-bar mode="indeterminate" color="accent" />
           </ng-container>
           <ng-template #showStatus>
@@ -93,13 +93,13 @@
       </td>
     </ng-container>
 
-    <ng-container matColumnDef="dateFinished">
+    <ng-container matColumnDef="dateModified">
       <th mat-header-cell *matHeaderCellDef class="column-header">
-        Date Finished
+        Date Updated
       </th>
       <td mat-cell *matCellDef="let request">
-        {{ request.dateFinished | date : "MM/dd/yy" }}<br />
-        {{ request.dateFinished | date : "HH:mm:ss" }}
+        {{ request.dateModified | date : "MM/dd/yy" }}<br />
+        {{ request.dateModified | date : "HH:mm:ss" }}
       </td>
     </ng-container>
 

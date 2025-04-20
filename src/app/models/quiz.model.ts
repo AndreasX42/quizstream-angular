@@ -17,7 +17,7 @@ export interface QuizRequest {
   quizName: string;
   status: RequestStatus;
   dateCreated: string;
-  dateFinished: string | null;
+  dateModified: string | null;
   errorMessage: string | null;
   quizId: string | null;
   metadata: RequestMetadata;

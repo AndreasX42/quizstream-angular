@@ -68,17 +68,21 @@ export class QuizRequestComponent implements OnInit {
     'quizName',
     'status',
     'dateCreated',
-    'dateFinished',
+    'dateModified',
     'errorMessage',
     'delete',
   ];
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe((params) => {
+    const sub = this.route.queryParams.subscribe((params) => {
       const createdRequest = params['createdRequest'];
       if (createdRequest === 'true') {
         this.quizRequestService.loadRequestsPolling();
       }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      sub.unsubscribe();
     });
 
     if (this.requests().length === 0) {
@@ -138,8 +142,6 @@ export class QuizRequestComponent implements OnInit {
         return 'accent';
       case 'FAILED':
         return 'warn';
-      case 'CREATING':
-        return 'primary';
       default:
         return 'primary';
     }

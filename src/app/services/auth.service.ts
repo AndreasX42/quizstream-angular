@@ -76,6 +76,7 @@ export class AuthService {
       return;
     }
   }
+
   async restoreSession(): Promise<boolean> {
     try {
       const user = await getCurrentUser();
@@ -187,6 +188,7 @@ export class AuthService {
       });
 
       console.log('Confirm sign up response:', response);
+      this.messageService.showSuccessModal(MessageService.MSG_SUCCESS_REGISTER);
       this.router.navigate(['/login'], { replaceUrl: true });
       return { success: true };
     } catch (error: unknown) {

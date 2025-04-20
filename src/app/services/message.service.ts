@@ -47,7 +47,7 @@ export class MessageService {
     'Something went wrong creating the quiz request.';
 
   // Warning messages
-  static MSG_WARNING_LOGIN_FIST =
+  static MSG_WARNING_LOGIN_FIRST =
     'You have to log in, in order to use this service.';
   static MSG_WARNING_DELETE_USER_ACCOUNT =
     'Deleting user account cannot be undone. Are you sure?';
